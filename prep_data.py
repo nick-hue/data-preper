@@ -51,7 +51,7 @@ def run_sfm(config_file: Path, output_dir: Path, vocab_tree_path: Path) -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run COLMAP with specified image path and matcher type.")
+    parser = argparse.ArgumentParser(description="Prepare input data for nerfstudio training via config file.")
     parser.add_argument('--config_file', required=True, help="Path to the config file.")
     parser.add_argument('--output_dir', required=True, help="Path to the output directory.")
     parser.add_argument('--vocab_tree_path', required=False, help="Path to the vocab tree, only needed when <matching_method> is <vocab_tree>.")
