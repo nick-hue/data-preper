@@ -12,6 +12,9 @@ class Preper:
     matching_method: Literal["exhaustive", "sequential", "vocab_tree"] = "vocab_tree"
 
     def __post_init__(self) -> None:
+        '''
+        makes sure fields that were given from the config file are correctly passed
+        '''
         for field in fields(self):
             field_value = getattr(self, field.name)
             allowed_values = field.type.__args__
@@ -22,14 +25,19 @@ class Preper:
                 raise ValueError(f"No value was passed for field : {field.name}")
 
 
-def read_config_file(config_file: Path):
+def read_config_file(config_file: Path) -> Preper:
+    '''
+    reads the fields from the config file and creates a preper 
+    '''
     with open(config_file, 'r') as f:
         data = yaml.load(f, Loader=yaml.SafeLoader)
     
     return Preper(train_method=data['train_method'], sfm_tool=data['sfm_tool'], matching_method=data['matching_method'])
 
-def run_sfm(config_file: Path, output_dir: Path, vocab_tree_path: Path):
-    # print(f"{config_file=}")
+def run_sfm(config_file: Path, output_dir: Path, vocab_tree_path: Path) -> None:
+    '''
+    runs the Structure-from-Motion command with the speficied configurations
+    '''
 
     preper: Preper = read_config_file(config_file=config_file)
 
