@@ -1,0 +1,3 @@
+train_method: nerfacto
+sfm_tool: colmap
+matcher_type: exhaustive
