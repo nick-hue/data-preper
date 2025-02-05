@@ -1,5 +1,5 @@
 train_method: nerfacto
-sfm_tool: colmap
+sfm_tool: glomap
 matching_method: exhaustive
 database_path: test_database_path/database.db
 image_dir: /home/nicag/nerfstudio/data/drz/experiment_2048/input/

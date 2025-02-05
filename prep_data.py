@@ -6,8 +6,10 @@ from typing import Literal, Optional, get_type_hints
 from rich.console import Console
 import subprocess
 import sys
+from contextlib import nullcontext
+import time
 
-CONSOLE = Console(width=170)
+CONSOLE = Console(width=120)
 
 @dataclass
 class Preper:
@@ -52,22 +54,58 @@ def read_config_file(config_file: Path) -> Preper:
                 camera_model=data['camera_model'],
                 use_gpu=data['use_gpu'])
 
-def run_sfm(config_file: Path, output_dir: Path, vocab_tree_path: Path) -> None:
+def run_command(cmd: str, verbose=False) -> Optional[str]:
+    """Runs a command and returns the output.
+
+    Args:
+        cmd: Command to run.
+        verbose: If True, logs the output of the command.
+    Returns:
+        The output of the command if return_output is True, otherwise None.
+    """
+    out = subprocess.run(cmd, capture_output=not verbose, shell=True, check=False)
+    if out.returncode != 0:
+        CONSOLE.rule("[bold red] :skull: :skull: :skull: ERROR :skull: :skull: :skull: ", style="red")
+        CONSOLE.print(f"[bold red]Error running command: {cmd}")
+        CONSOLE.rule(style="red")
+        CONSOLE.print(out.stderr.decode("utf-8"))
+        sys.exit(1)
+    if out.stdout is not None:
+        return out.stdout.decode("utf-8")
+    return out
+
+def status(msg: str, spinner: str = "bouncingBall", verbose: bool = False):
+    """A context manager that does nothing is verbose is True. Otherwise it hides logs under a message.
+
+    Args:
+        msg: The message to log.
+        spinner: The spinner to use.
+        verbose: If True, print all logs, else hide them.
+    """
+    if verbose:
+        return nullcontext()
+    return CONSOLE.status(msg, spinner=spinner)
+
+def run_sfm(config_file: Path, output_dir: str, vocab_tree_path: str) -> None:
     '''
     runs the Structure-from-Motion command with the speficied configurations
     '''
 
     preper: Preper = read_config_file(config_file=config_file)
 
-    if preper.matching_method == "vocab_tree" and vocab_tree_path is None:
-        raise FileNotFoundError("If [matching_method] is <vocab_tree>, then a [vocab_tree_path] is needed.")
+    if preper.matching_method == "vocab_tree":
+        if not vocab_tree_path.endswith(".fbow"):
+            raise FileNotFoundError(f"Supplied file [{vocab_tree_path}] does not end with '.fbow', a valid vocab tree path is needed.")
+        elif vocab_tree_path is None:
+            raise FileNotFoundError("If [matching_method] is <vocab_tree>, then a [vocab_tree_path] is needed.")
+            
     
     # print(preper)
     # print(f"{output_dir=}")
     # print(f"{vocab_tree_path=}")
 
     colmap_cmd = 'colmap'
-    verbose = True
+    verbose = False
 
     # Feature extraction command 
     feature_extractor_cmd = [
@@ -82,14 +120,49 @@ def run_sfm(config_file: Path, output_dir: Path, vocab_tree_path: Path) -> None:
     feature_extractor_cmd = " ".join(feature_extractor_cmd)
     print(f"{feature_extractor_cmd=}")
 
-    with CONSOLE.status("Running feature extraction...", spinner="moon"):
-        output = subprocess.run(f"{feature_extractor_cmd}", capture_output=True, shell=True, check=False)
+    CONSOLE.log(f"[bold green]Running feature extraction.")   
+    with status("Running...", spinner="moon", verbose=verbose):
+        run_command(cmd=feature_extractor_cmd, verbose=verbose)
+    CONSOLE.log("[bold green]:tada: Done extracting COLMAP features.")   
 
-    # print(f"{output=}")
-    if output.stderr and verbose:
-        CONSOLE.log(f"{output.stderr.decode('utf-8')}")
+    # Feature matching command 
+    feature_matcher_cmd = [f"colmap {preper.matching_method}_matcher",
+        f"--database_path {preper.database_path}",
+        f"--SiftMatching.use_gpu {preper.use_gpu}"
+    ]
+    if preper.matching_method == "vocab_tree":
+        feature_matcher_cmd.append(f'--VocabTreeMatching.vocab_tree_path "{vocab_tree_path}"')
     
-    CONSOLE.log("[bold green]:tada: Done extracting COLMAP features.")
+    feature_matcher_cmd = " ".join(feature_matcher_cmd)
+    print(f"{feature_matcher_cmd=}")
+
+    CONSOLE.log(f"[bold green]Running {preper.matching_method} matcher feature matching.")   
+    with status("Running...", spinner="moon", verbose=verbose):
+        run_command(cmd=feature_matcher_cmd, verbose=verbose)        
+    CONSOLE.log("[bold green]:tada: Done matching COLMAP features.")   
+
+    # Mapping
+    sparse_dir = Path(output_dir) / preper.sfm_tool / "sparse"
+    sparse_dir.mkdir(parents=True, exist_ok=True)
+
+    mapper_cmd = [
+        f"{preper.sfm_tool} mapper",
+        f"--database_path {preper.database_path}",
+        f"--image_path {preper.image_dir}",
+        f"--output_path {sparse_dir}",
+    ]
+    # if colmap_version >= Version("3.7"):
+    #     mapper_cmd.append("--Mapper.ba_global_function_tolerance=1e-6")
+
+    mapper_cmd = " ".join(mapper_cmd)
+    print(f"{mapper_cmd=}")
+
+    CONSOLE.log(f"[bold green]Running {preper.sfm_tool} mapper.")   
+    with status("Running...", spinner="moon", verbose=verbose):
+        run_command(cmd=mapper_cmd, verbose=verbose)    
+    CONSOLE.log("[bold green]:tada: Done COLMAP mapping.")   
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Prepare input data for nerfstudio training via config file.")
@@ -100,6 +173,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     run_sfm(args.config_file, args.output_dir, args.vocab_tree_path)
-
-
 
