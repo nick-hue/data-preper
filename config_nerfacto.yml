@@ -1,3 +1,7 @@
 train_method: nerfacto
 sfm_tool: colmap
 matching_method: exhaustive
+database_path: test_database_path/database.db
+image_dir: /home/nicag/nerfstudio/data/drz/experiment_2048/input/
+camera_model: OPENCV
+use_gpu: 1
