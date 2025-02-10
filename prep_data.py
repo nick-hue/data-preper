@@ -163,13 +163,13 @@ def run_sfm(config_file: Path, output_dir: str, vocab_tree_path: str) -> None:
     CONSOLE.log("[bold green]:tada: Done COLMAP mapping.")   
 
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Prepare input data for nerfstudio training via config file.")
     parser.add_argument('--config_file', required=True, help="Path to the config file.")
     parser.add_argument('--output_dir', required=True, help="Path to the output directory.")
     parser.add_argument('--vocab_tree_path', required=False, help="Path to the vocab tree, only needed when <matching_method> is <vocab_tree>.")
-    
+    # TODO: add argument for questioning before command execution
+
     args = parser.parse_args()
 
     run_sfm(args.config_file, args.output_dir, args.vocab_tree_path)
