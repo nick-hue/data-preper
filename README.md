@@ -27,9 +27,9 @@ First you will need to make a config file with the following attributes:
 
 ### 2. Script Arguments
 After having your config file ready the script expects the following arguments:
-* **config_file** : Path to the config file. (required)
-* **output_dir** : Path to the output directory. (required)
-* **vocab_tree_path** : Path to the vocab tree (required, only for `matching_method` being `vocab_tree`, can be fetched with the script below)
+* **config_file** : Path to the config file. (**required**)
+* **output_dir** : Path to the output directory. (**required**)
+* **vocab_tree_path** : Path to the vocab tree (**required**, only for `matching_method` being `vocab_tree`, can be fetched with the script below)
 
 ### 3. Running the Script
 Now you should be ready for executing the script, which looks like this:
