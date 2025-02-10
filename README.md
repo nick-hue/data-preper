@@ -9,12 +9,11 @@ Then this processed data is converted via the *nerfstudio* library and namely th
 ## Installation
 The following command downloads the needed library that are used to run the script.
 
-
 ```
 pip install -r requirements.txt
 ```
 
-## Script Execution
+## Data Preparation Script Execution
 
 ### 1. Config file
 First you will need to make a config file with the following attributes:
@@ -30,10 +29,18 @@ First you will need to make a config file with the following attributes:
 After having your config file ready the script expects the following arguments:
 * **config_file** : Path to the config file. (required)
 * **output_dir** : Path to the output directory. (required)
-* **vocab_tree_path** : Path to the vocab tree (required, only for `matching_method` being `vocab_tree`)
+* **vocab_tree_path** : Path to the vocab tree (required, only for `matching_method` being `vocab_tree`, can be fetched with the script below)
 
 ### 3. Running the Script
 Now you should be ready for executing the script, which looks like this:
 ```
 python prep_data.py --config_file <your_conf_file> --output_dir <output_directory>
+```
+
+## Vocab Tree Script
+This script prints the path where the file used for the `vocab_tree` matcher is located that is supplied to the `prep_data.py` file as an argument. If the file does not exist, it fetches it. 
+
+### Execution
+```
+python vocab_tree.py
 ```
