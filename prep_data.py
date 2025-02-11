@@ -45,7 +45,7 @@ def read_config_file(config_file: Path) -> Preper:
     with open(config_file, 'r') as f:
         data = yaml.load(f, Loader=yaml.SafeLoader)
     
-    print(data)
+    # print(data)
     return Preper(train_method=data['train_method'],\
                 sfm_tool=data['sfm_tool'], \
                 matching_method=data['matching_method'],
@@ -86,26 +86,28 @@ def status(msg: str, spinner: str = "bouncingBall", verbose: bool = False):
         return nullcontext()
     return CONSOLE.status(msg, spinner=spinner)
 
-def run_sfm(config_file: Path, output_dir: str, vocab_tree_path: str) -> None:
+def prompt_user_command(command_name: str):
+    choice = input(f"Do you want to run {command_name}? [y]/n\n")
+    if choice.lower() == "n":
+        CONSOLE.log("[bold red]:x: Exiting...")   
+        sys.exit(0)
+    
+
+def run_sfm(config_file: Path, output_dir: str, vocab_tree_path: str, prompt: bool, verbose: bool = False) -> None:
     '''
     runs the Structure-from-Motion command with the speficied configurations
     '''
 
     preper: Preper = read_config_file(config_file=config_file)
 
+    # checking if valid vocab_tree arguments passed 
     if preper.matching_method == "vocab_tree":
         if not vocab_tree_path.endswith(".fbow"):
             raise FileNotFoundError(f"Supplied file [{vocab_tree_path}] does not end with '.fbow', a valid vocab tree path is needed.")
         elif vocab_tree_path is None:
             raise FileNotFoundError("If [matching_method] is <vocab_tree>, then a [vocab_tree_path] is needed.")
-            
-    
-    # print(preper)
-    # print(f"{output_dir=}")
-    # print(f"{vocab_tree_path=}")
 
     colmap_cmd = 'colmap'
-    verbose = False
 
     # Feature extraction command 
     feature_extractor_cmd = [
@@ -118,7 +120,11 @@ def run_sfm(config_file: Path, output_dir: str, vocab_tree_path: str) -> None:
     ]
     
     feature_extractor_cmd = " ".join(feature_extractor_cmd)
-    print(f"{feature_extractor_cmd=}")
+    if verbose:
+        print(f"{feature_extractor_cmd=}")
+    
+    if prompt:
+        prompt_user_command("feature extraction")
 
     CONSOLE.log(f"[bold green]Running feature extraction.")   
     with status("Running...", spinner="moon", verbose=verbose):
@@ -134,7 +140,11 @@ def run_sfm(config_file: Path, output_dir: str, vocab_tree_path: str) -> None:
         feature_matcher_cmd.append(f'--VocabTreeMatching.vocab_tree_path "{vocab_tree_path}"')
     
     feature_matcher_cmd = " ".join(feature_matcher_cmd)
-    print(f"{feature_matcher_cmd=}")
+    if verbose:
+        print(f"{feature_matcher_cmd=}")
+
+    if prompt:
+        prompt_user_command("feature matching")
 
     CONSOLE.log(f"[bold green]Running {preper.matching_method} matcher feature matching.")   
     with status("Running...", spinner="moon", verbose=verbose):
@@ -151,11 +161,17 @@ def run_sfm(config_file: Path, output_dir: str, vocab_tree_path: str) -> None:
         f"--image_path {preper.image_dir}",
         f"--output_path {sparse_dir}",
     ]
-    # if colmap_version >= Version("3.7"):
-    #     mapper_cmd.append("--Mapper.ba_global_function_tolerance=1e-6")
+
+    if preper.sfm_tool == 'colmap':
+        #if colmap_version >= Version("3.7"):
+        mapper_cmd.append("--Mapper.ba_global_function_tolerance=1e-6")
 
     mapper_cmd = " ".join(mapper_cmd)
-    print(f"{mapper_cmd=}")
+    if verbose:
+        print(f"{mapper_cmd=}")
+
+    if prompt:
+        prompt_user_command("mapper")
 
     CONSOLE.log(f"[bold green]Running {preper.sfm_tool} mapper.")   
     with status("Running...", spinner="moon", verbose=verbose):
@@ -168,14 +184,15 @@ if __name__ == "__main__":
     parser.add_argument('--config_file', required=True, help="Path to the config file.")
     parser.add_argument('--output_dir', required=True, help="Path to the output directory.")
     parser.add_argument('--vocab_tree_path', required=False, help="Path to the vocab tree, only needed when <matching_method> is <vocab_tree>.")
-    parser.add_argument('-p, --prompt', required=False, help="Flag to prompt each time before running a command.")
-    parser.add_argument('-v, --verbose', required=False, help="Flag to print command extra information about commands.")
+    parser.add_argument('-p', '--prompt', action='store_true', help="Flag to prompt each time before running a command.")
+    parser.add_argument('-v', '--verbose', action='store_true', help="Flag to print command extra information about commands.")
     
     # TODO: add argument for questioning before command execution
     # TODO: turn colmaped data into nerfstudio data
     # TODO: make nerfacto feature
+    # TODO: log command information
 
     args = parser.parse_args()
 
-    run_sfm(args.config_file, args.output_dir, args.vocab_tree_path)
+    run_sfm(args.config_file, args.output_dir, args.vocab_tree_path, args.prompt, args.verbose)
 
