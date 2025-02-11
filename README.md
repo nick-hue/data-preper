@@ -30,6 +30,8 @@ After having your config file ready the script expects the following arguments:
 * **config_file** : Path to the config file. (**required**)
 * **output_dir** : Path to the output directory. (**required**)
 * **vocab_tree_path** : Path to the vocab tree (**required**, only for `matching_method` being `vocab_tree`, can be fetched with the script below)
+* **prompt** : Flag to prompt each time before running a command (alias `-p`)
+* **verbose** : Flag to print command extra information about commands (alias `-v`)
 
 ### 3. Running the Script
 Now you should be ready for executing the script, which looks like this:

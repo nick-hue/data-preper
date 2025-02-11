@@ -187,7 +187,6 @@ if __name__ == "__main__":
     parser.add_argument('-p', '--prompt', action='store_true', help="Flag to prompt each time before running a command.")
     parser.add_argument('-v', '--verbose', action='store_true', help="Flag to print command extra information about commands.")
     
-    # TODO: add argument for questioning before command execution
     # TODO: turn colmaped data into nerfstudio data
     # TODO: make nerfacto feature
     # TODO: log command information
