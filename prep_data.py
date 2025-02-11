@@ -168,6 +168,8 @@ if __name__ == "__main__":
     parser.add_argument('--config_file', required=True, help="Path to the config file.")
     parser.add_argument('--output_dir', required=True, help="Path to the output directory.")
     parser.add_argument('--vocab_tree_path', required=False, help="Path to the vocab tree, only needed when <matching_method> is <vocab_tree>.")
+    parser.add_argument('-p, --prompt', required=False, help="Flag to prompt each time before running a command.")
+    parser.add_argument('-v, --verbose', required=False, help="Flag to print command extra information about commands.")
     
     # TODO: add argument for questioning before command execution
     # TODO: turn colmaped data into nerfstudio data
