@@ -2,3 +2,4 @@ test_database_path/
 output/
 __pycache__
 .venv
+*.log

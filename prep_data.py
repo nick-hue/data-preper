@@ -3,12 +3,18 @@ from pathlib import Path
 from rich.console import Console
 from utils.config_loader import Preper, read_config_file
 from utils.log_utils import prompt_user_command, status, run_command
+import logging
 
-def run_sfm(config_file: Path, output_dir: str, vocab_tree_path: str, prompt: bool, verbose: bool = False) -> None:
+def run_sfm(config_file: Path,
+            output_dir: Path,
+            vocab_tree_path: Path,
+            prompt: bool,
+            verbose: bool = False
+            ) -> None:
     '''
     runs the Structure-from-Motion command with the speficied configurations
     '''
-
+    
     preper: Preper = read_config_file(config_file=config_file)
 
     # checking if valid vocab_tree arguments passed 
@@ -37,11 +43,16 @@ def run_sfm(config_file: Path, output_dir: str, vocab_tree_path: str, prompt: bo
     if prompt:
         prompt_user_command(command_name="feature extraction", console=CONSOLE)
 
-    CONSOLE.log(f"[bold green]Running feature extraction.")   
+    info_msg = f"Running feature extraction."
+    logger.info(f"Command >> {feature_extractor_cmd}")
+    logger.info(info_msg)
+    CONSOLE.log("[bold green]"+info_msg)
     with status("Running...", spinner="moon", verbose=verbose, console=CONSOLE):
         run_command(cmd=feature_extractor_cmd, verbose=verbose, console=CONSOLE)
-    CONSOLE.log("[bold green]:tada: Done extracting COLMAP features.")   
-
+    info_msg = "Done extracting COLMAP features."
+    logger.info(info_msg) 
+    CONSOLE.log("[bold green]:tada:"+info_msg)
+    
     # Feature matching command 
     feature_matcher_cmd = [f"colmap {preper.matching_method}_matcher",
         f"--database_path {preper.database_path}",
@@ -92,12 +103,13 @@ def run_sfm(config_file: Path, output_dir: str, vocab_tree_path: str, prompt: bo
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Prepare input data for nerfstudio training via config file.")
-    parser.add_argument('--config_file', required=True, help="Path to the config file.")
-    parser.add_argument('--output_dir', required=True, help="Path to the output directory.")
-    parser.add_argument('--vocab_tree_path', required=False, help="Path to the vocab tree, only needed when <matching_method> is <vocab_tree>.")
+    parser.add_argument('--config_file', required=True, type=Path, help="Path to the config file.")
+    parser.add_argument('--output_dir', required=True, type=Path, help="Path to the output directory.")
+    parser.add_argument('--vocab_tree_path', required=False, type=Path, help="Path to the vocab tree, only needed when <matching_method> is <vocab_tree>.")
     parser.add_argument('-p', '--prompt', action='store_true', help="Flag to prompt each time before running a command.")
     parser.add_argument('-v', '--verbose', action='store_true', help="Flag to print command extra information about commands.")
     parser.add_argument('-l', '--log', action='store_true', help="Flag to log command outputs and information.")
+    parser.add_argument('--log_file', required=False, type=Path, help="Logging file path, if [log] flag is set. (default: command_logs.log)")
     
     # TODO: log command information
     # TODO: turn colmaped data into nerfstudio data
@@ -105,8 +117,23 @@ if __name__ == "__main__":
 
     CONSOLE = Console(width=120)
 
+    args = parser.parse_args()    
+    logger = logging.getLogger(__name__)
 
-    args = parser.parse_args()
+    if args.log:
+        print("OK")
+        logging.basicConfig(filename=args.log_file if args.log_file else "command_logs.log", 
+                            format='%(asctime)s : %(levelname)s : %(message)s',
+                            filemode='w',
+                            level=logging.INFO)
+    else:
+        print("NOT OK")
+    # 
+   
 
+
+    
     run_sfm(args.config_file, args.output_dir, args.vocab_tree_path, args.prompt, args.verbose)
+    # sfm to nerfacto
+    # train model
 
