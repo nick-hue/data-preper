@@ -125,6 +125,7 @@ if __name__ == "__main__":
     parser.add_argument('--log_file', required=False, type=Path, help="Logging file path, if [log] flag is set. (default: command_logs.log)")
     
     # TODO: verbose console loggins with loggers ?? 
+    # TODO: error logging
     # TODO: turn colmaped data into nerfstudio data
     # TODO: make nerfacto feature
 
