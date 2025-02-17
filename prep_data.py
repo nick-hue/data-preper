@@ -68,11 +68,19 @@ def run_sfm(config_file: Path,
     if prompt:
         prompt_user_command(command_name="feature matching", console=CONSOLE)
 
-    CONSOLE.log(f"[bold green]Running {preper.matching_method} matcher feature matching.")   
+    with status("Running...", spinner="moon", verbose=verbose, console=CONSOLE):
+        run_command(cmd=feature_extractor_cmd, verbose=verbose, console=CONSOLE)
+    
+    info_msg = f"Running {preper.matching_method} matcher feature matching."
+    logger.info(f"Command >> {feature_matcher_cmd}")
+    logger.info(info_msg)
+    CONSOLE.log("[bold green]"+info_msg)    
     with status("Running...", spinner="moon", verbose=verbose, console=CONSOLE):
         run_command(cmd=feature_matcher_cmd, verbose=verbose, console=CONSOLE)        
-    CONSOLE.log("[bold green]:tada: Done matching COLMAP features.")   
-
+    info_msg = "Done matching COLMAP features."
+    logger.info(info_msg) 
+    CONSOLE.log("[bold green]:tada:"+info_msg)
+    
     # Mapping
     sparse_dir = Path(output_dir) / preper.sfm_tool / "sparse"
     sparse_dir.mkdir(parents=True, exist_ok=True)
@@ -95,11 +103,16 @@ def run_sfm(config_file: Path,
     if prompt:
         prompt_user_command(command_name="mapper", console=CONSOLE)
 
-    CONSOLE.log(f"[bold green]Running {preper.sfm_tool} mapper.")   
+    info_msg = f"Running {preper.sfm_tool} mapper."   
+    logger.info(f"Command >> {mapper_cmd}")
+    logger.info(info_msg)
+    CONSOLE.log("[bold green]"+info_msg)    
     with status("Running...", spinner="moon", verbose=verbose, console=CONSOLE):
         run_command(cmd=mapper_cmd, verbose=verbose, console=CONSOLE)    
-    CONSOLE.log("[bold green]:tada: Done COLMAP mapping.")   
-
+    info_msg = "Done COLMAP mapping."
+    logger.info(info_msg) 
+    CONSOLE.log("[bold green]:tada:"+info_msg)
+    
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Prepare input data for nerfstudio training via config file.")
@@ -111,7 +124,7 @@ if __name__ == "__main__":
     parser.add_argument('-l', '--log', action='store_true', help="Flag to log command outputs and information.")
     parser.add_argument('--log_file', required=False, type=Path, help="Logging file path, if [log] flag is set. (default: command_logs.log)")
     
-    # TODO: log command information
+    # TODO: verbose console loggins with loggers ?? 
     # TODO: turn colmaped data into nerfstudio data
     # TODO: make nerfacto feature
 
