@@ -1,97 +1,8 @@
 import argparse
 from pathlib import Path
-import yaml
-from dataclasses import dataclass, fields, _MISSING_TYPE
-from typing import Literal, Optional, get_type_hints
 from rich.console import Console
-import subprocess
-import sys
-from contextlib import nullcontext
-import time
-
-CONSOLE = Console(width=120)
-
-@dataclass
-class Preper:
-    train_method: Literal["nerfacto", "splatfacto"] = "nerfacto"
-    sfm_tool: Literal["colmap", "glomap"] = "colmap"
-    matching_method: Literal["exhaustive", "sequential", "vocab_tree"] = "vocab_tree"
-    database_path: Path = Path("")
-    image_dir: Path = Path("")
-    camera_model: Literal["OPENCV", "OPENCV_FISHEYE", "EQUIRECTANGULAR", "PINHOLE", "SIMPLE_PINHOLE"] = "OPENCV"
-    use_gpu: Literal[0,1] = 1
-
-    def __post_init__(self) -> None:
-        '''
-        makes sure fields that were given from the config file are correctly passed
-        '''
-        type_hints = get_type_hints(self.__class__)
-
-        for field in fields(self):
-            if hasattr(type_hints[field.name], '__args__'):
-                field_value = getattr(self, field.name)
-                allowed_values = field.type.__args__
-                if field_value not in allowed_values:
-                    raise ValueError(f"Invalid value <{field_value} for field [{field.name}]. Allowed values are: {allowed_values}.")
-
-                if not isinstance(field.default, _MISSING_TYPE) and getattr(self, field.name) is None:
-                    raise ValueError(f"No value was passed for field : {field.name}")
-
-
-def read_config_file(config_file: Path) -> Preper:
-    '''
-    reads the fields from the config file and creates a preper 
-    '''
-    with open(config_file, 'r') as f:
-        data = yaml.load(f, Loader=yaml.SafeLoader)
-    
-    # print(data)
-    return Preper(train_method=data['train_method'],\
-                sfm_tool=data['sfm_tool'], \
-                matching_method=data['matching_method'],
-                database_path=data['database_path'],
-                image_dir=data['image_dir'],
-                camera_model=data['camera_model'],
-                use_gpu=data['use_gpu'])
-
-def run_command(cmd: str, verbose=False) -> Optional[str]:
-    """Runs a command and returns the output.
-
-    Args:
-        cmd: Command to run.
-        verbose: If True, logs the output of the command.
-    Returns:
-        The output of the command if return_output is True, otherwise None.
-    """
-    out = subprocess.run(cmd, capture_output=not verbose, shell=True, check=False)
-    if out.returncode != 0:
-        CONSOLE.rule("[bold red] :skull: :skull: :skull: ERROR :skull: :skull: :skull: ", style="red")
-        CONSOLE.print(f"[bold red]Error running command: {cmd}")
-        CONSOLE.rule(style="red")
-        CONSOLE.print(out.stderr.decode("utf-8"))
-        sys.exit(1)
-    if out.stdout is not None:
-        return out.stdout.decode("utf-8")
-    return out
-
-def status(msg: str, spinner: str = "bouncingBall", verbose: bool = False):
-    """A context manager that does nothing is verbose is True. Otherwise it hides logs under a message.
-
-    Args:
-        msg: The message to log.
-        spinner: The spinner to use.
-        verbose: If True, print all logs, else hide them.
-    """
-    if verbose:
-        return nullcontext()
-    return CONSOLE.status(msg, spinner=spinner)
-
-def prompt_user_command(command_name: str):
-    choice = input(f"Do you want to run {command_name}? [y]/n\n")
-    if choice.lower() == "n":
-        CONSOLE.log("[bold red]:x: Exiting...")   
-        sys.exit(0)
-    
+from utils.config_loader import Preper, read_config_file
+from utils.log_utils import prompt_user_command, status, run_command
 
 def run_sfm(config_file: Path, output_dir: str, vocab_tree_path: str, prompt: bool, verbose: bool = False) -> None:
     '''
@@ -124,11 +35,11 @@ def run_sfm(config_file: Path, output_dir: str, vocab_tree_path: str, prompt: bo
         print(f"{feature_extractor_cmd=}")
     
     if prompt:
-        prompt_user_command("feature extraction")
+        prompt_user_command(command_name="feature extraction", console=CONSOLE)
 
     CONSOLE.log(f"[bold green]Running feature extraction.")   
-    with status("Running...", spinner="moon", verbose=verbose):
-        run_command(cmd=feature_extractor_cmd, verbose=verbose)
+    with status("Running...", spinner="moon", verbose=verbose, console=CONSOLE):
+        run_command(cmd=feature_extractor_cmd, verbose=verbose, console=CONSOLE)
     CONSOLE.log("[bold green]:tada: Done extracting COLMAP features.")   
 
     # Feature matching command 
@@ -144,11 +55,11 @@ def run_sfm(config_file: Path, output_dir: str, vocab_tree_path: str, prompt: bo
         print(f"{feature_matcher_cmd=}")
 
     if prompt:
-        prompt_user_command("feature matching")
+        prompt_user_command(command_name="feature matching", console=CONSOLE)
 
     CONSOLE.log(f"[bold green]Running {preper.matching_method} matcher feature matching.")   
-    with status("Running...", spinner="moon", verbose=verbose):
-        run_command(cmd=feature_matcher_cmd, verbose=verbose)        
+    with status("Running...", spinner="moon", verbose=verbose, console=CONSOLE):
+        run_command(cmd=feature_matcher_cmd, verbose=verbose, console=CONSOLE)        
     CONSOLE.log("[bold green]:tada: Done matching COLMAP features.")   
 
     # Mapping
@@ -171,11 +82,11 @@ def run_sfm(config_file: Path, output_dir: str, vocab_tree_path: str, prompt: bo
         print(f"{mapper_cmd=}")
 
     if prompt:
-        prompt_user_command("mapper")
+        prompt_user_command(command_name="mapper", console=CONSOLE)
 
     CONSOLE.log(f"[bold green]Running {preper.sfm_tool} mapper.")   
-    with status("Running...", spinner="moon", verbose=verbose):
-        run_command(cmd=mapper_cmd, verbose=verbose)    
+    with status("Running...", spinner="moon", verbose=verbose, console=CONSOLE):
+        run_command(cmd=mapper_cmd, verbose=verbose, console=CONSOLE)    
     CONSOLE.log("[bold green]:tada: Done COLMAP mapping.")   
 
 
@@ -186,10 +97,14 @@ if __name__ == "__main__":
     parser.add_argument('--vocab_tree_path', required=False, help="Path to the vocab tree, only needed when <matching_method> is <vocab_tree>.")
     parser.add_argument('-p', '--prompt', action='store_true', help="Flag to prompt each time before running a command.")
     parser.add_argument('-v', '--verbose', action='store_true', help="Flag to print command extra information about commands.")
+    parser.add_argument('-l', '--log', action='store_true', help="Flag to log command outputs and information.")
     
+    # TODO: log command information
     # TODO: turn colmaped data into nerfstudio data
     # TODO: make nerfacto feature
-    # TODO: log command information
+
+    CONSOLE = Console(width=120)
+
 
     args = parser.parse_args()
 
